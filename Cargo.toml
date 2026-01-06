@@ -1,6 +1,6 @@
 [package]
 name = "kadabra-runes"
-version = "0.1.0"
+version = "0.1.3"
 edition = "2024"
 authors = ["Kadabra AI"]
 description = "MCP server bridging LLM applications with language servers for semantic code navigation"

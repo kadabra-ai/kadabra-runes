@@ -84,28 +84,94 @@ git push origin v0.1.0
 # 5. Create GitHub Release (CI will do this automatically)
 ```
 
-### Publishing Updates
+### Publishing Updates (Automated with cargo-release)
+
+#### Prerequisites (One-time Setup)
+
+1. **Install cargo-release:**
+   ```bash
+   cargo install cargo-release
+   ```
+
+2. **Configure cargo with your crates.io token:**
+   ```bash
+   cargo login YOUR_API_TOKEN_HERE
+   ```
+
+3. **Verify CARGO_TOKEN GitHub secret is set** for binary builds
+
+#### Release Process
 
 ```bash
-# 1. Update version in Cargo.toml
-vim Cargo.toml  # Change version = "0.1.1"
+# 1. Ensure you're on main and up to date
+git checkout main
+git pull origin main
 
-# 2. Update CHANGELOG.md
-vim CHANGELOG.md  # Add new version section
+# 2. Update the [Unreleased] section in CHANGELOG.md with your changes
+vim CHANGELOG.md
 
-# 3. Commit changes
-git add Cargo.toml CHANGELOG.md
-git commit -m "Bump version to 0.1.1"
-
-# 4. Publish to crates.io
-cargo publish
-
-# 5. Tag and push
-git tag v0.1.1
-git push origin v0.1.1
+# 3. Commit the CHANGELOG updates
+git add CHANGELOG.md
+git commit -m "Update CHANGELOG for upcoming release"
 git push origin main
 
-# 6. GitHub Actions will create the release
+# 4. Run cargo-release (dry-run first is recommended)
+cargo release patch --dry-run  # Review what will happen
+cargo release patch --execute  # Execute the release
+
+# For different version bumps:
+# cargo release minor --execute  # 0.1.3 → 0.2.0
+# cargo release major --execute  # 0.1.3 → 1.0.0
+```
+
+**What cargo-release does:**
+1. Bumps version in Cargo.toml
+2. Moves [Unreleased] section to versioned section in CHANGELOG.md
+3. Creates a git commit with all changes
+4. Publishes to crates.io
+5. Creates and pushes a git tag
+6. Pushes the commit to origin
+7. GitHub Actions automatically builds binaries and creates GitHub Release
+
+#### Version Bump Semantics
+
+- **patch** (0.1.3 → 0.1.4): Bug fixes, minor improvements
+- **minor** (0.1.3 → 0.2.0): New features, backward-compatible changes
+- **major** (0.1.3 → 1.0.0): Breaking changes
+
+#### Troubleshooting
+
+**"error: repository is dirty"**
+```bash
+git status
+git add .
+git commit -m "Prepare for release"
+```
+
+**"error: not on allowed branch"**
+```bash
+git checkout main
+```
+
+**"error: failed to publish"**
+```bash
+cargo login --check
+cargo login YOUR_TOKEN  # Re-login if needed
+```
+
+**Undo a failed release:**
+```bash
+# Delete the local tag
+git tag -d v0.1.4
+
+# Delete the remote tag (if it was pushed)
+git push origin :refs/tags/v0.1.4
+
+# Reset to the commit before the release
+git reset --hard origin/main
+
+# If already published to crates.io, yank it
+cargo yank --vers 0.1.4
 ```
 
 ## Troubleshooting

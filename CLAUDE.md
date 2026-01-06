@@ -193,11 +193,24 @@ All tool responses follow consistent LLM-friendly patterns:
 
 ### Creating a Release
 
-1. Update version in `Cargo.toml`
-2. Update `CHANGELOG.md` with release notes
-3. Commit changes: `git commit -am "Release v0.1.0"`
-4. Create and push tag: `git tag v0.1.0 && git push origin v0.1.0`
-5. GitHub Actions will automatically build and create the release
+Releases are automated using cargo-release:
+
+1. Update CHANGELOG.md [Unreleased] section with changes
+2. Commit CHANGELOG: `git commit -am "Update CHANGELOG for release"`
+3. Push to main: `git push origin main`
+4. Run cargo-release: `cargo release patch --execute` (or `minor`/`major`)
+
+cargo-release will:
+- Bump version in Cargo.toml
+- Update CHANGELOG.md (move Unreleased → versioned)
+- Commit, tag, and push
+- Publish to crates.io
+
+GitHub Actions will automatically:
+- Build platform binaries
+- Create GitHub Release
+
+See PUBLISHING.md for detailed instructions.
 
 ### Required Secrets
 

@@ -8,6 +8,10 @@ on:
 env:
   CARGO_TERM_COLOR: always
 
+# This workflow is triggered by cargo-release pushing a tag.
+# cargo-release handles: version bump, CHANGELOG update, git commit/tag/push, and crates.io publish
+# This workflow builds platform binaries and creates the GitHub Release
+
 permissions:
   contents: write
 
@@ -185,20 +189,3 @@ jobs:
             Download the .zip file and extract `kadabra-runes.exe` to a directory in your PATH.
           draft: false
           prerelease: false
-
-  publish-crates:
-    name: Publish to crates.io
-    needs: build-release
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Publish to crates.io
-        env:
-          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_TOKEN }}
-        run: cargo publish
-        continue-on-error: true
