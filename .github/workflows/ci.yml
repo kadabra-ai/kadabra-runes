@@ -68,6 +68,7 @@ jobs:
         run: cargo test --lib --bins
 
       - name: Pre-test diagnostics
+        shell: bash
         run: |
           echo "=== Rust toolchain info ==="
           rustc --version
