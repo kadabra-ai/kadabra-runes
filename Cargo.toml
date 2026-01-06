@@ -1,0 +1,77 @@
+[package]
+name = "kadabra-runes"
+version = "0.1.0"
+edition = "2024"
+authors = ["Kadabra AI"]
+description = "MCP server bridging LLM applications with language servers for semantic code navigation"
+license = "MIT"
+repository = "https://github.com/kadabra-ai/kadabra-runes"
+homepage = "https://github.com/kadabra-ai/kadabra-runes"
+readme = "README.md"
+keywords = ["mcp", "lsp", "code-navigation", "language-server"]
+categories = ["development-tools"]
+exclude = [
+    ".github/",
+    "CLAUDE.md",
+    "PUBLISHING.md",
+    "INSTALL.md",
+    "REQUIREMENTS.md",
+    ".gitignore",
+    "tests/fixtures/sample_project/target/",
+]
+
+[dependencies]
+# Async runtime
+tokio = { version = "1.48", features = ["full"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# LSP protocol types and client
+# Using lsp-types for LSP protocol type definitions
+# Must match async-lsp's version to avoid type conflicts
+lsp-types = "0.95"
+
+# async-lsp: Async LSP framework that supports both server and client roles
+# Chosen over tower-lsp because tower-lsp is server-focused while async-lsp
+# explicitly supports client implementation through its symmetric design
+async-lsp = { version = "0.2", features = ["tokio", "stdio"] }
+
+# Process management for spawning language servers
+async-process = "2"
+
+# Tower middleware for LSP client
+tower = "0.4"
+
+# Futures utilities
+futures = "0.3"
+
+# MCP protocol support
+# rmcp is the official Rust SDK for Model Context Protocol
+# Using server feature for building MCP server with stdio transport
+rmcp = { version = "0.12", features = ["server", "transport-io", "macros"] }
+
+# JSON Schema generation for MCP tool parameters
+# Using schemars 1.x to match rmcp's dependency
+schemars = "1"
+
+# Command-line argument parsing
+clap = { version = "4", features = ["derive"] }
+
+# Error handling
+thiserror = "2.0"
+anyhow = "1.0"
+
+# Logging and diagnostics
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+
+[dev-dependencies]
+tokio-test = "0.4"
+serial_test = "3.2"
+
+[profile.release]
+lto = true
+codegen-units = 1
+opt-level = 3

@@ -1,0 +1,3 @@
+/target
+tests/fixtures/sample_project/target/
+.claude/**/*.local.*
