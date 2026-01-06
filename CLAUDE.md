@@ -109,8 +109,11 @@ LLM Client (Claude Code) ←→ MCP Server (kadabra-runes) ←→ LSP Client ←
 - Spawn real rust-analyzer instances
 - Use `tests/fixtures/sample_project` as test workspace
 - Automatically serialized via `serial_test` crate (using `#[serial]` attribute) to prevent conflicts
-- Include 2-second warmup after client initialization for indexing
+- CI-aware timeouts to handle slower CI environments:
+  - Local: 60s init, 30s request, 2s indexing wait, 500ms file processing
+  - CI: 120s init, 60s request, 8s indexing wait, 3s file processing
 - Test all 9 navigation tools with realistic scenarios
+- Detect CI via `std::env::var("CI").is_ok()` for automatic timeout adjustment
 
 ## Response Format Conventions
 
@@ -153,9 +156,10 @@ All tool responses follow consistent LLM-friendly patterns:
 
 ### LSP Client Lifecycle
 - Builder pattern for configuration (`LspClient::builder()`)
-- Async initialization with timeout (default 30s, tests use 60s)
+- Async initialization with timeout (default 30s, tests use 60s local / 120s CI)
 - Cleanup on Drop - gracefully shuts down language server
 - Document tracking via `did_open`/`did_close` notifications
+- CI environments automatically get longer timeouts for reliable indexing
 
 ## Important Constraints
 
