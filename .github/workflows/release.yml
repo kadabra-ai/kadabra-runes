@@ -8,63 +8,12 @@ on:
 env:
   CARGO_TERM_COLOR: always
 
+permissions:
+  contents: write
+
 jobs:
-  create-release:
-    name: Create Release
-    runs-on: ubuntu-latest
-    outputs:
-      upload_url: ${{ steps.create_release.outputs.upload_url }}
-      version: ${{ steps.get_version.outputs.version }}
-    steps:
-      - name: Get version from tag
-        id: get_version
-        run: echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
-
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
-          body: |
-            ## Changes in this Release
-
-            See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for details.
-
-            ## Installation
-
-            Download the appropriate binary for your platform below and place it in your PATH.
-
-            ### Quick Install
-
-            **macOS (Apple Silicon):**
-            ```bash
-            curl -L https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/kadabra-runes-aarch64-apple-darwin.tar.gz | tar xz
-            sudo mv kadabra-runes /usr/local/bin/
-            ```
-
-            **macOS (Intel):**
-            ```bash
-            curl -L https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/kadabra-runes-x86_64-apple-darwin.tar.gz | tar xz
-            sudo mv kadabra-runes /usr/local/bin/
-            ```
-
-            **Linux (x86_64):**
-            ```bash
-            curl -L https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/kadabra-runes-x86_64-unknown-linux-gnu.tar.gz | tar xz
-            sudo mv kadabra-runes /usr/local/bin/
-            ```
-
-            **Windows:**
-            Download the .zip file and extract `kadabra-runes.exe` to a directory in your PATH.
-          draft: false
-          prerelease: false
-
   build-release:
     name: Build Release
-    needs: create-release
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -155,27 +104,83 @@ jobs:
           cd target/${{ matrix.target }}/release
           Compress-Archive -Path ${{ matrix.artifact_name }} -DestinationPath ../../../${{ matrix.asset_name }}.zip
 
-      - name: Upload Release Asset (Linux/macOS)
+      - name: Upload Release Assets (Linux/macOS)
         if: matrix.os != 'windows-latest'
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v1
         with:
-          upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ./${{ matrix.asset_name }}.tar.gz
-          asset_name: ${{ matrix.asset_name }}.tar.gz
-          asset_content_type: application/gzip
+          files: ${{ matrix.asset_name }}.tar.gz
+          body: |
+            ## Changes in this Release
 
-      - name: Upload Release Asset (Windows)
+            See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for details.
+
+            ## Installation
+
+            Download the appropriate binary for your platform below and place it in your PATH.
+
+            ### Quick Install
+
+            **macOS (Apple Silicon):**
+            ```bash
+            curl -L https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/kadabra-runes-aarch64-apple-darwin.tar.gz | tar xz
+            sudo mv kadabra-runes /usr/local/bin/
+            ```
+
+            **macOS (Intel):**
+            ```bash
+            curl -L https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/kadabra-runes-x86_64-apple-darwin.tar.gz | tar xz
+            sudo mv kadabra-runes /usr/local/bin/
+            ```
+
+            **Linux (x86_64):**
+            ```bash
+            curl -L https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/kadabra-runes-x86_64-unknown-linux-gnu.tar.gz | tar xz
+            sudo mv kadabra-runes /usr/local/bin/
+            ```
+
+            **Windows:**
+            Download the .zip file and extract `kadabra-runes.exe` to a directory in your PATH.
+          draft: false
+          prerelease: false
+
+      - name: Upload Release Assets (Windows)
         if: matrix.os == 'windows-latest'
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v1
         with:
-          upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ./${{ matrix.asset_name }}.zip
-          asset_name: ${{ matrix.asset_name }}.zip
-          asset_content_type: application/zip
+          files: ${{ matrix.asset_name }}.zip
+          body: |
+            ## Changes in this Release
+
+            See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for details.
+
+            ## Installation
+
+            Download the appropriate binary for your platform below and place it in your PATH.
+
+            ### Quick Install
+
+            **macOS (Apple Silicon):**
+            ```bash
+            curl -L https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/kadabra-runes-aarch64-apple-darwin.tar.gz | tar xz
+            sudo mv kadabra-runes /usr/local/bin/
+            ```
+
+            **macOS (Intel):**
+            ```bash
+            curl -L https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/kadabra-runes-x86_64-apple-darwin.tar.gz | tar xz
+            sudo mv kadabra-runes /usr/local/bin/
+            ```
+
+            **Linux (x86_64):**
+            ```bash
+            curl -L https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/kadabra-runes-x86_64-unknown-linux-gnu.tar.gz | tar xz
+            sudo mv kadabra-runes /usr/local/bin/
+            ```
+
+            **Windows:**
+            Download the .zip file and extract `kadabra-runes.exe` to a directory in your PATH.
+          draft: false
+          prerelease: false
 
   publish-crates:
     name: Publish to crates.io
