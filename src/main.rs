@@ -7,9 +7,9 @@ use std::path::PathBuf;
 
 use anyhow::{Context, Result};
 use clap::Parser;
-use rmcp::{transport::stdio, ServiceExt};
-use tracing::{info, Level};
-use tracing_subscriber::{fmt, prelude::*, EnvFilter};
+use rmcp::{ServiceExt, transport::stdio};
+use tracing::{Level, info};
+use tracing_subscriber::{EnvFilter, fmt, prelude::*};
 
 mod error;
 mod lsp;

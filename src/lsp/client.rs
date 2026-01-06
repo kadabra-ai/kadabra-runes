@@ -36,10 +36,10 @@ use async_lsp::router::Router;
 use async_lsp::tracing::TracingLayer;
 use async_lsp::{LanguageServer, ServerSocket};
 use lsp_types::{
-    notification, request, CallHierarchyIncomingCall, CallHierarchyIncomingCallsParams,
-    CallHierarchyItem, CallHierarchyOutgoingCall, CallHierarchyOutgoingCallsParams,
-    CallHierarchyPrepareParams, ClientCapabilities, ClientInfo, CompletionClientCapabilities,
-    CompletionItemCapability, DidChangeTextDocumentParams, DidChangeWatchedFilesClientCapabilities,
+    CallHierarchyIncomingCall, CallHierarchyIncomingCallsParams, CallHierarchyItem,
+    CallHierarchyOutgoingCall, CallHierarchyOutgoingCallsParams, CallHierarchyPrepareParams,
+    ClientCapabilities, ClientInfo, CompletionClientCapabilities, CompletionItemCapability,
+    DidChangeTextDocumentParams, DidChangeWatchedFilesClientCapabilities,
     DidCloseTextDocumentParams, DidOpenTextDocumentParams, DocumentSymbolClientCapabilities,
     DocumentSymbolParams, DocumentSymbolResponse, DynamicRegistrationClientCapabilities,
     GotoCapability, GotoDefinitionParams, GotoDefinitionResponse, Hover, HoverClientCapabilities,
@@ -50,14 +50,15 @@ use lsp_types::{
     Url, VersionedTextDocumentIdentifier, WindowClientCapabilities, WorkDoneProgressParams,
     WorkspaceClientCapabilities, WorkspaceEditClientCapabilities, WorkspaceFolder,
     WorkspaceSymbolClientCapabilities, WorkspaceSymbolParams, WorkspaceSymbolResponse,
+    notification, request,
 };
 use tokio::sync::Mutex;
 use tower::ServiceBuilder;
 
 use crate::error::LspError;
 
-use super::types::{path_to_url, to_lsp_position};
 use super::LspResult;
+use super::types::{path_to_url, to_lsp_position};
 
 /// State for handling LSP client notifications.
 ///
@@ -326,9 +327,7 @@ impl LspClientBuilder {
         )
         .await
         .map_err(|_| LspError::Timeout(self.config.init_timeout))?
-        .map_err(|e| {
-            LspError::InitializationFailed(format!("initialize request failed: {e:?}"))
-        })?;
+        .map_err(|e| LspError::InitializationFailed(format!("initialize request failed: {e:?}")))?;
 
         let capabilities = Arc::new(init_result.capabilities);
 

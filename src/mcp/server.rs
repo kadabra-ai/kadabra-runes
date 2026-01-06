@@ -8,12 +8,13 @@ use std::sync::Arc;
 
 use lsp_types::{DocumentSymbolResponse, GotoDefinitionResponse};
 use rmcp::{
+    ErrorData as McpError, ServerHandler,
     handler::server::wrapper::Parameters,
     model::{
         CallToolResult, Content, ErrorCode, Implementation, ProtocolVersion, ServerCapabilities,
         ServerInfo,
     },
-    tool, tool_router, ErrorData as McpError, ServerHandler,
+    tool, tool_router,
 };
 
 use crate::lsp::client::LspClient;
@@ -237,8 +238,10 @@ impl KadabraRunes {
                 // For symbol name queries, we need to search first
                 return Err(McpError::new(
                     ErrorCode::INVALID_PARAMS,
-                    format!("Symbol name queries not yet implemented. Use workspace_symbols to find '{symbol}' first, then use position-based query."),
-                    None
+                    format!(
+                        "Symbol name queries not yet implemented. Use workspace_symbols to find '{symbol}' first, then use position-based query."
+                    ),
+                    None,
                 ));
             }
         };
@@ -286,8 +289,10 @@ impl KadabraRunes {
             SymbolQuery::Name { symbol, .. } => {
                 return Err(McpError::new(
                     ErrorCode::INVALID_PARAMS,
-                    format!("Symbol name queries not yet implemented. Use workspace_symbols to find '{symbol}' first, then use position-based query."),
-                    None
+                    format!(
+                        "Symbol name queries not yet implemented. Use workspace_symbols to find '{symbol}' first, then use position-based query."
+                    ),
+                    None,
                 ));
             }
         };
@@ -591,8 +596,10 @@ impl KadabraRunes {
             SymbolQuery::Name { symbol, .. } => {
                 return Err(McpError::new(
                     ErrorCode::INVALID_PARAMS,
-                    format!("Symbol name queries not yet implemented. Use workspace_symbols to find '{symbol}' first, then use position-based query."),
-                    None
+                    format!(
+                        "Symbol name queries not yet implemented. Use workspace_symbols to find '{symbol}' first, then use position-based query."
+                    ),
+                    None,
                 ));
             }
         };
