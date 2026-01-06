@@ -43,10 +43,9 @@ fn find_rust_analyzer() -> String {
         if let Ok(output) = std::process::Command::new(candidate)
             .arg("--version")
             .output()
+            && output.status.success()
         {
-            if output.status.success() {
-                return candidate.to_string();
-            }
+            return candidate.to_string();
         }
     }
 
@@ -152,7 +151,7 @@ async fn test_find_references() {
         .map(|loc| {
             loc.uri
                 .path_segments()
-                .and_then(|s| s.last())
+                .and_then(|mut s| s.next_back())
                 .unwrap_or("")
                 .to_string()
         })
@@ -236,7 +235,7 @@ async fn test_document_symbols() {
             // For nested symbols, check recursively
             fn contains_symbol(symbols: &[lsp_types::DocumentSymbol], name: &str) -> bool {
                 symbols.iter().any(|s| {
-                    s.name == name || contains_symbol(&s.children.as_ref().unwrap_or(&vec![]), name)
+                    s.name == name || contains_symbol(s.children.as_ref().unwrap_or(&vec![]), name)
                 })
             }
 
@@ -490,10 +489,10 @@ async fn test_workspace_symbols_queries() {
     let queries = vec!["add", "Calculator", "Point", "multiply"];
 
     for query in queries {
-        let result = client.workspace_symbols(query).await.expect(&format!(
-            "workspace_symbols should succeed for query '{}'",
-            query
-        ));
+        let result = client
+            .workspace_symbols(query)
+            .await
+            .unwrap_or_else(|_| panic!("workspace_symbols should succeed for query '{}'", query));
 
         // Each query should find at least something in our test fixture
         assert!(
