@@ -3,14 +3,14 @@
 //! This is the main entry point for the kadabra-runes MCP server.
 //! It sets up logging, parses arguments, and starts the server.
 
-use std::path::PathBuf;
-
 use anyhow::{Context, Result};
 use clap::Parser;
 use rmcp::{ServiceExt, transport::stdio};
+use std::path::PathBuf;
 use tracing::{Level, info};
 use tracing_subscriber::{EnvFilter, fmt, prelude::*};
 
+mod config;
 mod error;
 mod lsp;
 mod mcp;
@@ -23,6 +23,25 @@ use mcp::KadabraRunes;
 #[command(name = "kadabra-runes")]
 #[command(author, version, about, long_about = None)]
 struct Args {
+    #[command(subcommand)]
+    command: Option<Commands>,
+}
+
+/// Available commands
+#[derive(Parser, Debug)]
+enum Commands {
+    /// Start the MCP server (default)
+    #[command(name = "serve")]
+    Serve(ServeArgs),
+
+    /// Configure MCP client to use kadabra-runes
+    #[command(name = "config")]
+    Config(ConfigArgs),
+}
+
+/// Arguments for the serve command
+#[derive(Parser, Debug)]
+struct ServeArgs {
     /// Workspace root directory to navigate.
     #[arg(short, long, default_value = ".")]
     workspace: PathBuf,
@@ -40,7 +59,13 @@ struct Args {
     log_level: String,
 }
 
-impl Args {
+/// Arguments for the config command
+#[derive(Parser, Debug)]
+struct ConfigArgs {
+    // No arguments needed - just creates .mcp.json in current directory
+}
+
+impl ServeArgs {
     /// Parses the log level string into a tracing Level.
     fn parse_log_level(&self) -> Result<Level> {
         match self.log_level.to_lowercase().as_str() {
@@ -89,6 +114,31 @@ async fn main() -> Result<()> {
     // Parse command-line arguments
     let args = Args::parse();
 
+    // Dispatch based on command
+    match args.command {
+        Some(Commands::Serve(serve_args)) => run_serve(serve_args).await,
+        Some(Commands::Config(config_args)) => run_config(config_args),
+        // Default to serve command for backward compatibility
+        None => {
+            run_serve(ServeArgs {
+                workspace: PathBuf::from("."),
+                language_server: "rust-analyzer".to_string(),
+                language_server_args: vec![],
+                log_level: "info".to_string(),
+            })
+            .await
+        }
+    }
+}
+
+/// Run the config command
+fn run_config(_args: ConfigArgs) -> Result<()> {
+    // Create/update .mcp.json in current directory
+    config::configure()
+}
+
+/// Run the serve command (MCP server)
+async fn run_serve(args: ServeArgs) -> Result<()> {
     // Initialize tracing
     let log_level = args.parse_log_level()?;
     init_tracing(log_level)?;
@@ -126,6 +176,9 @@ async fn main() -> Result<()> {
     let service = server
         .serve(stdio())
         .await
+        .inspect_err(|e| {
+            tracing::error!("serving error: {:?}", e);
+        })
         .context("failed to start MCP server")?;
 
     info!("MCP server started, waiting for messages");
@@ -143,8 +196,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_args_parse_log_level() {
-        let args = Args {
+    fn test_serve_args_parse_log_level() {
+        let args = ServeArgs {
             workspace: PathBuf::from("."),
             language_server: "rust-analyzer".to_string(),
             language_server_args: vec![],

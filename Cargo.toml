@@ -27,6 +27,9 @@ tokio = { version = "1.48", features = ["full"] }
 # Serialization
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+# JSON Schema generation for MCP tool parameters
+# Using schemars 1.x to match rmcp's dependency
+schemars = { version = "1.2.0", features = ["derive"]}
 
 # LSP protocol types and client
 # Using lsp-types for LSP protocol type definitions
@@ -52,9 +55,6 @@ futures = "0.3"
 # Using server feature for building MCP server with stdio transport
 rmcp = { version = "0.12", features = ["server", "transport-io", "macros"] }
 
-# JSON Schema generation for MCP tool parameters
-# Using schemars 1.x to match rmcp's dependency
-schemars = "1"
 
 # Command-line argument parsing
 clap = { version = "4", features = ["derive"] }

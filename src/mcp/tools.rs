@@ -50,6 +50,7 @@ use serde::{Deserialize, Serialize};
 
 /// Common input for position-based tool calls.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct PositionParams {
     /// Path to the file.
     #[schemars(description = "Absolute path to the source file")]
@@ -62,37 +63,42 @@ pub struct PositionParams {
     pub column: u32,
 }
 
+/// Input for symbol-based queries by name with an optional file path filter.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct SymbolNameParams {
+    /// The symbol name to search for.
+    #[schemars(description = "The symbol name to search for")]
+    pub symbol: String,
+    /// Optional file path to narrow the search.
+    #[schemars(description = "Optional file path to narrow the search scope")]
+    pub file_path: Option<String>,
+}
+
 /// Input for symbol-based queries that can use either position or symbol name.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-#[serde(untagged)]
+#[serde(tag = "kind", content = "data", rename_all = "camelCase")]
 pub enum SymbolQuery {
     /// Query by position in a file.
     Position(PositionParams),
     /// Query by symbol name.
-    Name {
-        /// The symbol name to search for.
-        #[schemars(description = "The symbol name to search for")]
-        symbol: String,
-        /// Optional file path to narrow the search.
-        #[schemars(description = "Optional file path to narrow the search scope")]
-        file_path: Option<String>,
-    },
+    Name(SymbolNameParams),
 }
 
 /// Parameters for the `goto_definition` tool.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct GotoDefinitionParams {
     /// The symbol to find the definition of.
-    #[serde(flatten)]
     #[schemars(description = "The symbol to find the definition of (by position or name)")]
     pub query: SymbolQuery,
 }
 
 /// Parameters for the `find_references` tool.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct FindReferencesParams {
     /// The symbol to find references to.
-    #[serde(flatten)]
     #[schemars(description = "The symbol to find references to (by position or name)")]
     pub query: SymbolQuery,
     /// Whether to include the declaration in the results.
@@ -103,15 +109,16 @@ pub struct FindReferencesParams {
 
 /// Parameters for the hover tool.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct HoverParams {
     /// Position to get hover info for.
-    #[serde(flatten)]
     #[schemars(description = "Position in the file to get hover info for")]
     pub position: PositionParams,
 }
 
 /// Parameters for the `document_symbols` tool.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct DocumentSymbolsParams {
     /// Path to the file.
     #[schemars(description = "Absolute path to the source file to list symbols from")]
@@ -120,6 +127,7 @@ pub struct DocumentSymbolsParams {
 
 /// Parameters for the `workspace_symbols` tool.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct WorkspaceSymbolsParams {
     /// Query string to search for.
     #[schemars(description = "Query string to search for symbols across the workspace")]
@@ -136,27 +144,27 @@ fn default_max_results() -> u32 {
 
 /// Parameters for the `incoming_calls` tool.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct IncomingCallsParams {
     /// Position of the function to find callers for.
-    #[serde(flatten)]
     #[schemars(description = "Position of the function to find callers for")]
     pub position: PositionParams,
 }
 
 /// Parameters for the `outgoing_calls` tool.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct OutgoingCallsParams {
     /// Position of the function to find callees for.
-    #[serde(flatten)]
     #[schemars(description = "Position of the function to find callees for")]
     pub position: PositionParams,
 }
 
 /// Parameters for the implementations tool.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct ImplementationsParams {
     /// The trait/interface to find implementations for.
-    #[serde(flatten)]
     #[schemars(
         description = "The trait/interface to find implementations for (by position or name)"
     )]
@@ -165,9 +173,9 @@ pub struct ImplementationsParams {
 
 /// Parameters for the `type_definition` tool.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct TypeDefinitionParams {
     /// Position to get type definition for.
-    #[serde(flatten)]
     #[schemars(description = "Position in the file to get type definition for")]
     pub position: PositionParams,
 }
@@ -175,7 +183,8 @@ pub struct TypeDefinitionParams {
 /// A location in the source code with context.
 /// Note: Currently unused - reserved for future structured JSON responses.
 #[allow(dead_code)]
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct LocationWithContext {
     /// Path to the file.
     pub file_path: String,
@@ -196,7 +205,8 @@ pub struct LocationWithContext {
 /// A symbol with its location.
 /// Note: Currently unused - reserved for future structured JSON responses.
 #[allow(dead_code)]
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct SymbolInfo {
     /// The symbol name.
     pub name: String,
@@ -212,7 +222,8 @@ pub struct SymbolInfo {
 /// Result of a hover operation.
 /// Note: Currently unused - reserved for future structured JSON responses.
 #[allow(dead_code)]
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct HoverResult {
     /// The type signature or declaration.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -225,7 +236,8 @@ pub struct HoverResult {
 /// Information about a call relationship.
 /// Note: Currently unused - reserved for future structured JSON responses.
 #[allow(dead_code)]
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct CallInfo {
     /// The function making or receiving the call.
     pub function: SymbolInfo,
@@ -245,19 +257,19 @@ mod tests {
             column: 5,
         };
         let json = serde_json::to_string(&params).unwrap();
-        assert!(json.contains("file_path"));
+        assert!(json.contains("filePath"));
         assert!(json.contains("/path/to/file.rs"));
     }
 
     #[test]
     fn test_symbol_query_deserialization() {
         // Position query
-        let json = r#"{"file_path": "/path/to/file.rs", "line": 10, "column": 5}"#;
+        let json = r#"{"kind": "position", "data": { "filePath": "/path/to/file.rs", "line": 10, "column": 5} }"#;
         let query: SymbolQuery = serde_json::from_str(json).unwrap();
         assert!(matches!(query, SymbolQuery::Position(_)));
 
         // Name query
-        let json = r#"{"symbol": "MyStruct"}"#;
+        let json = r#"{"kind": "name", "data": { "symbol": "MyStruct"} }"#;
         let query: SymbolQuery = serde_json::from_str(json).unwrap();
         assert!(matches!(query, SymbolQuery::Name { .. }));
     }

@@ -2,11 +2,15 @@
 //!
 //! This module contains the `KadabraRunes` struct that implements the MCP server
 //! with code navigation tools powered by the Language Server Protocol.
+#[allow(dead_code)]
 use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
+use crate::lsp::client::LspClient;
+use crate::lsp::types::{from_lsp_position, symbol_kind_to_string};
 use lsp_types::{DocumentSymbolResponse, GotoDefinitionResponse};
+use rmcp::handler::server::tool::ToolRouter;
 use rmcp::{
     ErrorData as McpError, ServerHandler,
     handler::server::wrapper::Parameters,
@@ -14,15 +18,12 @@ use rmcp::{
         CallToolResult, Content, ErrorCode, Implementation, ProtocolVersion, ServerCapabilities,
         ServerInfo,
     },
-    tool, tool_router,
+    tool, tool_handler, tool_router,
 };
-
-use crate::lsp::client::LspClient;
-use crate::lsp::types::{from_lsp_position, symbol_kind_to_string};
 
 use super::tools::{
     DocumentSymbolsParams, FindReferencesParams, GotoDefinitionParams, HoverParams,
-    ImplementationsParams, IncomingCallsParams, OutgoingCallsParams, SymbolQuery,
+    ImplementationsParams, IncomingCallsParams, OutgoingCallsParams, SymbolNameParams, SymbolQuery,
     TypeDefinitionParams, WorkspaceSymbolsParams,
 };
 
@@ -33,11 +34,11 @@ use super::tools::{
 #[derive(Clone)]
 pub struct KadabraRunes {
     /// Root directory of the workspace to navigate.
-    #[allow(dead_code)]
     workspace_root: PathBuf,
     /// LSP client for semantic code navigation.
-    #[allow(dead_code)]
     lsp_client: Arc<LspClient>,
+    #[allow(dead_code)]
+    tool_router: ToolRouter<KadabraRunes>,
 }
 
 impl KadabraRunes {
@@ -47,10 +48,12 @@ impl KadabraRunes {
     ///
     /// * `workspace_root` - Root directory of the workspace to navigate.
     /// * `lsp_client` - LSP client instance for code navigation.
+    #[allow(dead_code)]
     pub fn new(workspace_root: PathBuf, lsp_client: LspClient) -> Self {
         Self {
             workspace_root,
             lsp_client: Arc::new(lsp_client),
+            tool_router: Self::tool_router(),
         }
     }
 
@@ -226,7 +229,9 @@ fn format_symbol_information(symbols: &[lsp_types::SymbolInformation]) -> String
 #[tool_router]
 impl KadabraRunes {
     /// Jump to the definition of a symbol at a given position or by name.
-    #[tool(description = "Jump to the definition of a symbol at a given position or by name")]
+    #[tool(
+        description = "Jump to where a symbol is defined. Essential for tracing imports and understanding implementations."
+    )]
     async fn goto_definition(
         &self,
         Parameters(params): Parameters<GotoDefinitionParams>,
@@ -234,7 +239,7 @@ impl KadabraRunes {
         // Extract position from params
         let (file_path, line, column) = match &params.query {
             SymbolQuery::Position(pos) => (PathBuf::from(&pos.file_path), pos.line, pos.column),
-            SymbolQuery::Name { symbol, .. } => {
+            SymbolQuery::Name(SymbolNameParams { symbol, .. }) => {
                 // For symbol name queries, we need to search first
                 return Err(McpError::new(
                     ErrorCode::INVALID_PARAMS,
@@ -278,7 +283,9 @@ impl KadabraRunes {
     }
 
     /// Find all references to a symbol in the workspace.
-    #[tool(description = "Find all references to a symbol in the workspace")]
+    #[tool(
+        description = "Find all usages of a symbol. Reveals dependencies, call sites, and impact of changes."
+    )]
     async fn find_references(
         &self,
         Parameters(params): Parameters<FindReferencesParams>,
@@ -286,7 +293,7 @@ impl KadabraRunes {
         // Extract position from params
         let (file_path, line, column) = match &params.query {
             SymbolQuery::Position(pos) => (PathBuf::from(&pos.file_path), pos.line, pos.column),
-            SymbolQuery::Name { symbol, .. } => {
+            SymbolQuery::Name(SymbolNameParams { symbol, .. }) => {
                 return Err(McpError::new(
                     ErrorCode::INVALID_PARAMS,
                     format!(
@@ -326,7 +333,9 @@ impl KadabraRunes {
     }
 
     /// Get type information and documentation for a symbol.
-    #[tool(description = "Get type information and documentation for a symbol")]
+    #[tool(
+        description = "Get type signature and docs. Quick way to understand what something is without navigating away."
+    )]
     async fn hover(
         &self,
         Parameters(params): Parameters<HoverParams>,
@@ -374,7 +383,9 @@ impl KadabraRunes {
     }
 
     /// List all symbols defined in a file.
-    #[tool(description = "List all symbols defined in a file")]
+    #[tool(
+        description = "List all symbols in a file. Get a structural overview: functions, types, constants, etc."
+    )]
     async fn document_symbols(
         &self,
         Parameters(params): Parameters<DocumentSymbolsParams>,
@@ -425,7 +436,9 @@ impl KadabraRunes {
     }
 
     /// Search for symbols across the entire workspace.
-    #[tool(description = "Search for symbols across the entire workspace")]
+    #[tool(
+        description = "Search symbols by name across the workspace. Find types, functions, or modules without knowing their location."
+    )]
     async fn workspace_symbols(
         &self,
         Parameters(params): Parameters<WorkspaceSymbolsParams>,
@@ -460,7 +473,9 @@ impl KadabraRunes {
     }
 
     /// Find all functions that call the function at the given position.
-    #[tool(description = "Find all functions that call the function at the given position")]
+    #[tool(
+        description = "Find callers of a function. Build upward call graphs, trace who depends on this code."
+    )]
     async fn incoming_calls(
         &self,
         Parameters(params): Parameters<IncomingCallsParams>,
@@ -523,7 +538,9 @@ impl KadabraRunes {
     }
 
     /// Find all functions called by the function at the given position.
-    #[tool(description = "Find all functions called by the function at the given position")]
+    #[tool(
+        description = "Find callees of a function. Build downward call graphs, trace execution flow."
+    )]
     async fn outgoing_calls(
         &self,
         Parameters(params): Parameters<OutgoingCallsParams>,
@@ -585,7 +602,9 @@ impl KadabraRunes {
     }
 
     /// Find all implementations of a trait or interface.
-    #[tool(description = "Find all implementations of a trait or interface")]
+    #[tool(
+        description = "Find trait/interface implementations. Discover concrete types, understand polymorphism."
+    )]
     async fn implementations(
         &self,
         Parameters(params): Parameters<ImplementationsParams>,
@@ -593,7 +612,7 @@ impl KadabraRunes {
         // Extract position from params
         let (file_path, line, column) = match &params.query {
             SymbolQuery::Position(pos) => (PathBuf::from(&pos.file_path), pos.line, pos.column),
-            SymbolQuery::Name { symbol, .. } => {
+            SymbolQuery::Name(SymbolNameParams { symbol, .. }) => {
                 return Err(McpError::new(
                     ErrorCode::INVALID_PARAMS,
                     format!(
@@ -636,7 +655,9 @@ impl KadabraRunes {
     }
 
     /// Jump to the type definition of a symbol.
-    #[tool(description = "Jump to the type definition of a symbol")]
+    #[tool(
+        description = "Jump to a symbol's type definition. Understand what type a variable or expression has."
+    )]
     async fn type_definition(
         &self,
         Parameters(params): Parameters<TypeDefinitionParams>,
@@ -677,6 +698,7 @@ impl KadabraRunes {
     }
 }
 
+#[tool_handler]
 impl ServerHandler for KadabraRunes {
     fn get_info(&self) -> ServerInfo {
         ServerInfo {
@@ -688,10 +710,10 @@ impl ServerHandler for KadabraRunes {
                 ..Default::default()
             },
             instructions: Some(
-                "A code navigation MCP server that provides semantic code analysis \
-                 through Language Server Protocol integration. Use the available tools \
-                 to navigate codebases: find definitions, references, implementations, \
-                 call hierarchies, and symbol information."
+                "Semantic code intelligence via LSP. Enables: reverse engineering unfamiliar code, \
+                 building call graphs, tracing dependencies, understanding type hierarchies, \
+                 and exploring how code flows through a system. Works with any LSP-compatible \
+                 language server (rust-analyzer, typescript-language-server, etc.)."
                     .into(),
             ),
         }

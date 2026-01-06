@@ -129,13 +129,19 @@ async fn test_goto_definition() {
             // Verify the definition is in lib.rs
             let location = &locations[0];
             assert!(
-                location.uri.as_str().contains("lib.rs"),
+                location
+                    .uri
+                    .as_str()
+                    .ends_with("tests/fixtures/sample_project/src/lib.rs"),
                 "Definition should be in lib.rs"
             );
         }
         GotoDefinitionResponse::Scalar(location) => {
             assert!(
-                location.uri.as_str().contains("lib.rs"),
+                location
+                    .uri
+                    .as_str()
+                    .contains("tests/fixtures/sample_project/src/lib.rs"),
                 "Definition should be in lib.rs"
             );
         }

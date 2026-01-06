@@ -66,6 +66,7 @@
 #![allow(clippy::module_name_repetitions)]
 #![allow(clippy::must_use_candidate)]
 
+pub mod config;
 pub mod error;
 pub mod lsp;
 pub mod mcp;

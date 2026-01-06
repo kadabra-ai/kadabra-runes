@@ -2,8 +2,16 @@
 
 This guide covers how to install and configure the Kadabra Runes MCP server with various LLM applications.
 
+> 💡 **Quick Setup**: After installing kadabra-runes, use the `config` command for easy setup:
+> ```bash
+> cd /path/to/your/rust/project
+> kadabra-runes config
+> ```
+> This creates `.mcp.json` in your project root. Works with Claude Code, Gemini CLI, and other MCP clients. See [Quick Setup](#quick-setup) below.
+
 ## Table of Contents
 
+- [Quick Setup](#quick-setup)
 - [Prerequisites](#prerequisites)
 - [Building the Server](#building-the-server)
 - [Claude Desktop](#claude-desktop)
@@ -13,6 +21,33 @@ This guide covers how to install and configure the Kadabra Runes MCP server with
 - [Codex CLI](#codex-cli)
 - [Verification](#verification)
 - [Troubleshooting](#troubleshooting)
+
+## Quick Setup
+
+After [building the server](#building-the-server), use the `config` command:
+
+```bash
+cd /path/to/your/rust/project
+kadabra-runes config
+```
+
+This creates `.mcp.json` in your project root with the kadabra-runes configuration.
+
+**Compatible with:**
+- Claude Code (CLI) ✨
+- Gemini CLI
+- Other MCP clients that support project-level `.mcp.json`
+
+**Benefits:**
+- Simple one-command setup
+- Can be committed to git for team sharing
+- Standard MCP configuration format
+
+### Manual Configuration
+
+If you need to configure global settings or prefer manual configuration, follow the client-specific instructions below.
+
+---
 
 ## Prerequisites
 

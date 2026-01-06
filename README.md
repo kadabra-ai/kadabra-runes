@@ -97,6 +97,22 @@ The binary will be available at `target/release/kadabra-runes`.
 cargo install --path .
 ```
 
+## Quick Setup
+
+After installing kadabra-runes, configure your MCP client with one command:
+
+```bash
+cd /path/to/your/rust/project
+kadabra-runes config
+```
+
+This creates `.mcp.json` in your project root with the kadabra-runes configuration. The file uses the standard MCP configuration format that works with:
+- **Claude Code (CLI)**
+- **Gemini CLI**
+- **Other MCP clients** that support project-level `.mcp.json`
+
+> **Tip**: Commit `.mcp.json` to git to share the configuration with your team!
+
 ## Usage
 
 ### Basic Usage
