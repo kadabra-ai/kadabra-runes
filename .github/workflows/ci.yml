@@ -46,20 +46,14 @@ jobs:
           path: target
           key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Install rust-analyzer (Ubuntu)
-        if: matrix.os == 'ubuntu-latest'
+      - name: Install rust-analyzer
         run: |
           rustup component add rust-analyzer
 
-      - name: Install rust-analyzer (macOS)
-        if: matrix.os == 'macos-latest'
+      - name: Verify rust-analyzer installation
         run: |
-          rustup component add rust-analyzer
-
-      - name: Install rust-analyzer (Windows)
-        if: matrix.os == 'windows-latest'
-        run: |
-          rustup component add rust-analyzer
+          rust-analyzer --version
+          which rust-analyzer || where rust-analyzer
 
       - name: Check formatting
         run: cargo fmt --all -- --check
@@ -73,10 +67,24 @@ jobs:
       - name: Run unit tests
         run: cargo test --lib --bins
 
+      - name: Pre-test diagnostics
+        run: |
+          echo "=== Rust toolchain info ==="
+          rustc --version
+          cargo --version
+          rust-analyzer --version
+          echo "=== Environment ==="
+          echo "CI=$CI"
+          echo "RUNNER_OS=$RUNNER_OS"
+          echo "=== Test fixture ==="
+          ls -la tests/fixtures/sample_project/
+
       - name: Run integration tests
-        run: cargo test --test integration_test
+        run: cargo test --test integration_test -- --nocapture
         env:
-          RUST_LOG: info
+          RUST_LOG: debug
+          CI: true
+        timeout-minutes: 15
 
   coverage:
     name: Code Coverage

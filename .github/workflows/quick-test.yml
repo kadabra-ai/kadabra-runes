@@ -35,6 +35,11 @@ jobs:
       - name: Install rust-analyzer
         run: rustup component add rust-analyzer
 
+      - name: Verify rust-analyzer installation
+        run: |
+          rust-analyzer --version
+          which rust-analyzer || echo "rust-analyzer not in PATH"
+
       - name: Check formatting
         run: cargo fmt --all -- --check
 
@@ -46,3 +51,6 @@ jobs:
 
       - name: Run tests
         run: cargo test
+        env:
+          CI: true
+        timeout-minutes: 10
