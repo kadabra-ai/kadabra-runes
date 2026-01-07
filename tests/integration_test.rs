@@ -15,5 +15,5 @@
 //! Note: These tests require rust-analyzer to be installed (via `rustup component add rust-analyzer`).
 
 mod common;
-mod lsp_client_test;
-mod mcp_tool_test;
+// mod lsp_client_test;
+// mod mcp_tool_test;

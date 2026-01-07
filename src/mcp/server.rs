@@ -22,8 +22,8 @@ use rmcp::{
 };
 
 use super::tools::{
-    DocumentSymbolsParams, FindReferencesParams, GotoDefinitionParams, HoverParams,
-    ImplementationsParams, IncomingCallsParams, OutgoingCallsParams, SymbolNameParams, SymbolQuery,
+    DocumentSymbolsParams, FindReferencesParams, HoverParams, ImplementationsParams,
+    IncomingCallsParams, OutgoingCallsParams, PositionParams, SymbolNameParams, SymbolQuery,
     TypeDefinitionParams, WorkspaceSymbolsParams,
 };
 
@@ -119,6 +119,7 @@ fn format_location(loc: &lsp_types::Location, context_lines: usize) -> Result<St
 /// Searches for a symbol by exact name in document symbols.
 ///
 /// Returns (line, column) if found, None otherwise.
+#[allow(dead_code)]
 fn find_symbol_in_document(
     doc_symbols: &DocumentSymbolResponse,
     symbol_name: &str,
@@ -138,7 +139,7 @@ fn find_symbol_in_document(
     }
 }
 
-/// Recursively searches nested DocumentSymbol tree for exact match.
+/// Recursively searches nested `DocumentSymbol` tree for exact match.
 fn find_in_nested_symbols(symbols: &[DocumentSymbol], symbol_name: &str) -> Option<(u32, u32)> {
     for symbol in symbols {
         // Check current symbol
@@ -147,10 +148,10 @@ fn find_in_nested_symbols(symbols: &[DocumentSymbol], symbol_name: &str) -> Opti
         }
 
         // Recursively check children
-        if let Some(children) = &symbol.children {
-            if let Some(result) = find_in_nested_symbols(children, symbol_name) {
-                return Some(result);
-            }
+        if let Some(children) = &symbol.children
+            && let Some(result) = find_in_nested_symbols(children, symbol_name)
+        {
+            return Some(result);
         }
     }
     None
@@ -274,82 +275,12 @@ impl KadabraRunes {
     )]
     pub async fn goto_definition(
         &self,
-        Parameters(params): Parameters<GotoDefinitionParams>,
+        Parameters(params): Parameters<PositionParams>,
     ) -> Result<CallToolResult, McpError> {
         // Extract position from params
-        let (file_path, line, column) = match &params.query {
-            SymbolQuery::Position(pos) => (
-                self.workspace_root.join(&pos.file_path),
-                pos.line,
-                pos.column,
-            ),
-            SymbolQuery::Name(SymbolNameParams { symbol, file_path }) => {
-                // Combined search strategy:
-                // 1. If file_path provided: try document_symbols in that file first
-                // 2. If not found (or no file_path): try workspace_symbols
-                // 3. Return exact match or error
-
-                let mut found_symbol: Option<(PathBuf, u32, u32)> = None;
-
-                // STEP 1: Try document_symbols if file_path is provided
-                if let Some(current_file) = file_path {
-                    let current_path = self.workspace_root.join(current_file);
-
-                    // Try to open and search in current file
-                    if self.lsp_client.did_open(&current_path).await.is_ok()
-                        && let Ok(doc_symbols) =
-                            self.lsp_client.document_symbols(&current_path).await
-                    {
-                        // Search for exact match in document symbols
-                        if let Some((line, column)) = find_symbol_in_document(&doc_symbols, symbol)
-                        {
-                            found_symbol = Some((current_path, line, column));
-                        }
-                    }
-                }
-
-                // STEP 2: If not found in document, try workspace_symbols
-                if found_symbol.is_none() {
-                    let symbols = self
-                        .lsp_client
-                        .workspace_symbols(symbol)
-                        .await
-                        .map_err(|e| {
-                            McpError::new(
-                                ErrorCode::INTERNAL_ERROR,
-                                format!("workspace_symbols failed: {e}"),
-                                None,
-                            )
-                        })?;
-
-                    // Find exact match
-                    let exact_match = symbols.iter().find(|sym| sym.name == *symbol);
-
-                    if let Some(symbol_info) = exact_match {
-                        let uri_path = symbol_info.location.uri.to_file_path().map_err(|()| {
-                            McpError::new(
-                                ErrorCode::INTERNAL_ERROR,
-                                "invalid file URI from symbol location",
-                                None,
-                            )
-                        })?;
-
-                        let (sym_line, sym_column) =
-                            from_lsp_position(symbol_info.location.range.start);
-                        found_symbol = Some((uri_path, sym_line, sym_column));
-                    }
-                }
-
-                // STEP 3: Return result or error
-                found_symbol.ok_or_else(|| {
-                    McpError::new(
-                        ErrorCode::INVALID_PARAMS,
-                        format!("Symbol '{symbol}' not found"),
-                        None,
-                    )
-                })?
-            }
-        };
+        let file_path = self.workspace_root.join(&params.file_path);
+        let line = params.line;
+        let column = params.column;
 
         // Ensure the document is open
         self.lsp_client.did_open(&file_path).await.map_err(|e| {

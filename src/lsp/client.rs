@@ -44,13 +44,12 @@ use lsp_types::{
     DocumentSymbolParams, DocumentSymbolResponse, DynamicRegistrationClientCapabilities,
     GotoCapability, GotoDefinitionParams, GotoDefinitionResponse, Hover, HoverClientCapabilities,
     HoverParams, InitializeParams, InitializedParams, Location, MarkupKind, PartialResultParams,
-    ReferenceContext, ReferenceParams, ServerCapabilities, SymbolInformation, SymbolKind,
-    SymbolKindCapability, TextDocumentClientCapabilities, TextDocumentContentChangeEvent,
-    TextDocumentIdentifier, TextDocumentItem, TextDocumentPositionParams,
-    TextDocumentSyncClientCapabilities, TraceValue, Url, VersionedTextDocumentIdentifier,
-    WindowClientCapabilities, WorkDoneProgressParams, WorkspaceClientCapabilities,
-    WorkspaceEditClientCapabilities, WorkspaceFolder, WorkspaceSymbolClientCapabilities,
-    WorkspaceSymbolParams, WorkspaceSymbolResolveSupportCapability, WorkspaceSymbolResponse,
+    ReferenceContext, ReferenceParams, ServerCapabilities, SymbolInformation,
+    TextDocumentClientCapabilities, TextDocumentContentChangeEvent, TextDocumentIdentifier,
+    TextDocumentItem, TextDocumentPositionParams, TextDocumentSyncClientCapabilities, TraceValue,
+    Url, VersionedTextDocumentIdentifier, WindowClientCapabilities, WorkDoneProgressParams,
+    WorkspaceClientCapabilities, WorkspaceEditClientCapabilities, WorkspaceFolder,
+    WorkspaceSymbolClientCapabilities, WorkspaceSymbolParams, WorkspaceSymbolResponse,
     notification, request,
 };
 use tokio::sync::Mutex;
@@ -251,40 +250,7 @@ impl LspClientBuilder {
                     }),
                     symbol: Some(WorkspaceSymbolClientCapabilities {
                         dynamic_registration: Some(false),
-                        symbol_kind: Some(SymbolKindCapability {
-                            value_set: Some(vec![
-                                SymbolKind::FILE,
-                                SymbolKind::MODULE,
-                                SymbolKind::NAMESPACE,
-                                SymbolKind::PACKAGE,
-                                SymbolKind::CLASS,
-                                SymbolKind::METHOD,
-                                SymbolKind::PROPERTY,
-                                SymbolKind::FIELD,
-                                SymbolKind::CONSTRUCTOR,
-                                SymbolKind::ENUM,
-                                SymbolKind::INTERFACE,
-                                SymbolKind::FUNCTION,       // Function symbols (add, multiply, etc.)
-                                SymbolKind::VARIABLE,
-                                SymbolKind::CONSTANT,
-                                SymbolKind::STRING,
-                                SymbolKind::NUMBER,
-                                SymbolKind::BOOLEAN,
-                                SymbolKind::ARRAY,
-                                SymbolKind::OBJECT,
-                                SymbolKind::KEY,
-                                SymbolKind::NULL,
-                                SymbolKind::ENUM_MEMBER,
-                                SymbolKind::STRUCT,         // Struct symbols (Adder, Calculator, etc.)
-                                SymbolKind::EVENT,
-                                SymbolKind::OPERATOR,
-                                SymbolKind::TYPE_PARAMETER,
-                            ]),
-                        }),
-                        tag_support: None,
-                        resolve_support: Some(WorkspaceSymbolResolveSupportCapability {
-                            properties: vec!["location.range".to_string()],
-                        }),
+                        ..Default::default()
                     }),
                     execute_command: Some(DynamicRegistrationClientCapabilities {
                         dynamic_registration: Some(false),
@@ -684,7 +650,6 @@ impl LspClient {
         match result {
             Some(WorkspaceSymbolResponse::Flat(symbols)) => Ok(symbols),
             Some(WorkspaceSymbolResponse::Nested(_nested)) => {
-
                 // For nested symbols, we'd need to flatten them
                 // For now, return empty
                 Ok(vec![])

@@ -1,8 +1,16 @@
 //! Common test helpers and utilities.
 
+#![allow(dead_code)]
+
+pub mod lsp_harness;
+pub mod temp_workspace;
+
 use kadabra_runes::lsp::client::LspClient;
 use std::path::PathBuf;
 use std::time::Duration;
+
+// Re-export for convenience
+pub use temp_workspace::TestWorkspace;
 
 /// Helper to get the fixture project path
 pub fn fixture_path() -> PathBuf {

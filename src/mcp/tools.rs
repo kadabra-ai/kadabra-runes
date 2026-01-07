@@ -48,7 +48,7 @@ use serde::{Deserialize, Serialize};
 // }
 // ```
 
-/// Common input for position-based tool calls.
+/// Defines position in the file - path, line and column number.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct PositionParams {
@@ -85,14 +85,14 @@ pub enum SymbolQuery {
     Name(SymbolNameParams),
 }
 
-/// Parameters for the `goto_definition` tool.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct GotoDefinitionParams {
-    /// The symbol to find the definition of.
-    #[schemars(description = "The symbol to find the definition of (by position or name)")]
-    pub query: SymbolQuery,
-}
+// /// Parameters for the `goto_definition` tool.
+// #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+// #[serde(rename_all = "camelCase")]
+// pub struct GotoDefinitionParams {
+//     /// The symbol to find the definition of.
+//     #[schemars(description = "The symbol to find the definition of by pointing position in file")]
+//     pub query: PositionParams,
+// }
 
 /// Parameters for the `find_references` tool.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
