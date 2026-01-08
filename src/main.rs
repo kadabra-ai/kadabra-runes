@@ -7,6 +7,7 @@ use anyhow::{Context, Result};
 use clap::Parser;
 use rmcp::{ServiceExt, transport::stdio};
 use std::path::PathBuf;
+use std::sync::Arc;
 use tracing::{Level, info};
 use tracing_subscriber::{EnvFilter, fmt, prelude::*};
 
@@ -168,7 +169,7 @@ async fn run_serve(args: ServeArgs) -> Result<()> {
     info!("LSP client initialized successfully");
 
     // Create KadabraRunes instance with LSP client
-    let server = KadabraRunes::new(workspace, lsp_client);
+    let server = KadabraRunes::new(workspace, Arc::new(lsp_client));
 
     info!("starting MCP server with stdio transport");
 

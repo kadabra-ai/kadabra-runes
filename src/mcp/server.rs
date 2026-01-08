@@ -49,10 +49,10 @@ impl KadabraRunes {
     /// * `workspace_root` - Root directory of the workspace to navigate.
     /// * `lsp_client` - LSP client instance for code navigation.
     #[allow(dead_code)]
-    pub fn new(workspace_root: PathBuf, lsp_client: LspClient) -> Self {
+    pub fn new(workspace_root: PathBuf, lsp_client: Arc<LspClient>) -> Self {
         Self {
             workspace_root,
-            lsp_client: Arc::new(lsp_client),
+            lsp_client,
             tool_router: Self::tool_router(),
         }
     }

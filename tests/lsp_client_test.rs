@@ -15,201 +15,13 @@
 //! cargo test --test lsp_client_test test_goto_definition
 //! ```
 mod common;
-use common::TestWorkspace;
+use common::temp_workspace::TestWorkspace;
 use lsp_types::{DocumentSymbolResponse, GotoDefinitionResponse, SymbolKind};
-
-// Helper to create fixture with cursor markers
-fn create_fixture_with_cursor(
-    cargo_toml: &str,
-    main_rs: &str,
-    lib_rs: &str,
-    calculator_rs: &str,
-    cursor_file: &str,
-    cursor_pattern: &str,
-) -> String {
-    let main_with_cursor = if cursor_file == "main.rs" {
-        main_rs.replacen(cursor_pattern, &format!("{}$0", cursor_pattern), 1)
-    } else {
-        main_rs.to_string()
-    };
-
-    let lib_with_cursor = if cursor_file == "lib.rs" {
-        lib_rs.replacen(cursor_pattern, &format!("{}$0", cursor_pattern), 1)
-    } else {
-        lib_rs.to_string()
-    };
-
-    let calc_with_cursor = if cursor_file == "calculator.rs" {
-        calculator_rs.replacen(cursor_pattern, &format!("{}$0", cursor_pattern), 1)
-    } else {
-        calculator_rs.to_string()
-    };
-
-    format!(
-        r#"//- /Cargo.toml
-{}
-//- /src/main.rs
-{}
-//- /src/lib.rs
-{}
-//- /src/calculator.rs
-{}
-"#,
-        cargo_toml, main_with_cursor, lib_with_cursor, calc_with_cursor
-    )
-}
-
-fn comprehensive_fixture() -> String {
-    let cargo_toml = include_str!("./fixtures/sample_project/Cargo.toml");
-    let main_rs = include_str!("./fixtures/sample_project/src/main.rs");
-    let lib_rs = include_str!("./fixtures/sample_project/src/lib.rs");
-    let calculator_rs = include_str!("./fixtures/sample_project/src/calculator.rs");
-
-    // Add cursor at the 'add' function call in main.rs
-    create_fixture_with_cursor(cargo_toml, main_rs, lib_rs, calculator_rs, "main.rs", "add")
-}
-
-// Legacy inline fixture for reference
-#[allow(dead_code)]
-const _COMPREHENSIVE_FIXTURE_INLINE: &str = r#"
-//- /Cargo.toml
-[package]
-name = "test_project"
-version = "0.1.0"
-edition = "2021"
-
-[dependencies]
-
-//- /src/main.rs
-use test_project::{add, subtract, Calculator};
-
-fn main() {
-    // Test basic math operations
-    let x = 5;
-    let y = 10;
-    let result = add$0(x, y);
-    println!("Result: {}", result);
-
-    let diff = subtract(y, x);
-    println!("Difference: {}", diff);
-
-    // Test calculator trait
-    use_calculator();
-}
-
-fn use_calculator() {
-    let calc = test_project::Adder;
-    let sum = calc.calculate(15, 25);
-    println!("Calculator result: {}", sum);
-}
-
-//- /src/lib.rs
-pub mod calculator;
-
-pub use calculator::{Adder, Calculator};
-
-/// Adds two numbers together.
-///
-/// # Arguments
-///
-/// * `a` - First number
-/// * `b` - Second number
-///
-/// # Returns
-///
-/// The sum of a and b
-///
-/// # Examples
-///
-/// ```
-/// let result = test_project::add(5, 10);
-/// assert_eq!(result, 15);
-/// ```
-pub fn add(a: i32, b: i32) -> i32 {
-    a + b
-}
-
-/// Subtracts b from a.
-///
-/// # Arguments
-///
-/// * `a` - The number to subtract from
-/// * `b` - The number to subtract
-///
-/// # Returns
-///
-/// The difference a - b
-pub fn subtract(a: i32, b: i32) -> i32 {
-    a - b
-}
-
-/// Multiplies two numbers.
-pub fn multiply(a: i32, b: i32) -> i32 {
-    a * b
-}
-
-/// A simple struct to demonstrate type definitions.
-pub struct Point {
-    pub x: i32,
-    pub y: i32,
-}
-
-impl Point {
-    /// Creates a new Point.
-    pub fn new(x: i32, y: i32) -> Self {
-        Point { x, y }
-    }
-
-    /// Returns the distance from origin.
-    pub fn distance_from_origin(&self) -> f64 {
-        ((self.x.pow(2) + self.y.pow(2)) as f64).sqrt()
-    }
-}
-
-//- /src/calculator.rs
-/// A trait for implementing different calculation strategies.
-pub trait Calculator {
-    /// Performs a calculation on two numbers.
-    fn calculate(&self, a: i32, b: i32) -> i32;
-}
-
-/// A calculator that adds two numbers.
-pub struct Adder;
-
-impl Calculator for Adder {
-    fn calculate(&self, a: i32, b: i32) -> i32 {
-        a + b
-    }
-}
-
-/// A calculator that multiplies two numbers.
-pub struct Multiplier;
-
-impl Calculator for Multiplier {
-    fn calculate(&self, a: i32, b: i32) -> i32 {
-        a * b
-    }
-}
-
-/// A calculator that subtracts the second number from the first.
-pub struct Subtractor;
-
-impl Calculator for Subtractor {
-    fn calculate(&self, a: i32, b: i32) -> i32 {
-        a - b
-    }
-}
-
-/// Performs calculation using any calculator implementation.
-pub fn perform_calculation(calc: &dyn Calculator, a: i32, b: i32) -> i32 {
-    calc.calculate(a, b)
-}
-"#;
 
 #[tokio::test]
 async fn goto_definition_add() {
     let ws = TestWorkspace::builder()
-        .fixture(&comprehensive_fixture())
+        .fixture(&common::comprehensive_fixture())
         .open_all_files()
         .build()
         .await;
@@ -250,7 +62,7 @@ async fn goto_definition_add() {
 #[tokio::test]
 async fn test_goto_definition() {
     let ws = TestWorkspace::builder()
-        .fixture(&comprehensive_fixture())
+        .fixture(&common::comprehensive_fixture())
         .open_all_files()
         .build()
         .await;
@@ -288,7 +100,7 @@ async fn test_goto_definition() {
 #[tokio::test]
 async fn test_find_references() {
     let ws = TestWorkspace::builder()
-        .fixture(&comprehensive_fixture())
+        .fixture(&common::comprehensive_fixture())
         .open_all_files()
         .build()
         .await;
@@ -329,7 +141,7 @@ async fn test_find_references() {
 #[tokio::test]
 async fn test_hover() {
     let ws = TestWorkspace::builder()
-        .fixture(&comprehensive_fixture())
+        .fixture(&common::comprehensive_fixture())
         .open_all_files()
         .build()
         .await;
@@ -371,7 +183,7 @@ async fn test_hover() {
 #[tokio::test]
 async fn test_document_symbols() {
     let ws = TestWorkspace::builder()
-        .fixture(&comprehensive_fixture())
+        .fixture(&common::comprehensive_fixture())
         .open_all_files()
         .build()
         .await;
@@ -411,7 +223,7 @@ async fn test_document_symbols() {
 #[tokio::test]
 async fn test_workspace_symbols() {
     let ws = TestWorkspace::builder()
-        .fixture(&comprehensive_fixture())
+        .fixture(&common::comprehensive_fixture())
         .open_all_files()
         .build()
         .await;
@@ -440,7 +252,7 @@ async fn test_workspace_symbols() {
 #[tokio::test]
 async fn test_incoming_calls() {
     let ws = TestWorkspace::builder()
-        .fixture(&comprehensive_fixture())
+        .fixture(&common::comprehensive_fixture())
         .open_all_files()
         .build()
         .await;
@@ -468,7 +280,7 @@ async fn test_incoming_calls() {
 #[tokio::test]
 async fn test_outgoing_calls() {
     let ws = TestWorkspace::builder()
-        .fixture(&comprehensive_fixture())
+        .fixture(&common::comprehensive_fixture())
         .open_all_files()
         .build()
         .await;
@@ -501,7 +313,7 @@ async fn test_outgoing_calls() {
 #[tokio::test]
 async fn test_implementations() {
     let ws = TestWorkspace::builder()
-        .fixture(&comprehensive_fixture())
+        .fixture(&common::comprehensive_fixture())
         .open_all_files()
         .build()
         .await;
@@ -537,7 +349,7 @@ async fn test_implementations() {
 #[tokio::test]
 async fn test_type_definition() {
     let ws = TestWorkspace::builder()
-        .fixture(&comprehensive_fixture())
+        .fixture(&common::comprehensive_fixture())
         .open_all_files()
         .build()
         .await;
@@ -573,7 +385,7 @@ async fn test_type_definition() {
 #[tokio::test]
 async fn test_shutdown() {
     let ws = TestWorkspace::builder()
-        .fixture(&comprehensive_fixture())
+        .fixture(&common::comprehensive_fixture())
         .build()
         .await;
 
@@ -584,7 +396,7 @@ async fn test_shutdown() {
 #[tokio::test]
 async fn test_multiple_operations() {
     let ws = TestWorkspace::builder()
-        .fixture(&comprehensive_fixture())
+        .fixture(&common::comprehensive_fixture())
         .open_all_files()
         .build()
         .await;
@@ -615,7 +427,7 @@ async fn test_multiple_operations() {
 #[tokio::test]
 async fn test_invalid_position() {
     let ws = TestWorkspace::builder()
-        .fixture(&comprehensive_fixture())
+        .fixture(&common::comprehensive_fixture())
         .open_all_files()
         .build()
         .await;
@@ -629,7 +441,7 @@ async fn test_invalid_position() {
 #[tokio::test]
 async fn test_workspace_symbols_queries() {
     let ws = TestWorkspace::builder()
-        .fixture(&comprehensive_fixture())
+        .fixture(&common::comprehensive_fixture())
         .open_all_files()
         .build()
         .await;
@@ -655,7 +467,7 @@ async fn test_workspace_symbols_queries() {
 #[tokio::test]
 async fn test_workspace_symbols_function_names() {
     let ws = TestWorkspace::builder()
-        .fixture(&comprehensive_fixture())
+        .fixture(&common::comprehensive_fixture())
         .open_all_files()
         .build()
         .await;
@@ -692,7 +504,7 @@ async fn test_workspace_symbols_function_names() {
 #[tokio::test]
 async fn test_workspace_symbols_add_detailed() {
     let ws = TestWorkspace::builder()
-        .fixture(&comprehensive_fixture())
+        .fixture(&common::comprehensive_fixture())
         .open_all_files()
         .build()
         .await;
@@ -713,7 +525,7 @@ async fn test_workspace_symbols_add_detailed() {
 #[tokio::test]
 async fn test_document_symbols_add_function() {
     let ws = TestWorkspace::builder()
-        .fixture(&comprehensive_fixture())
+        .fixture(&common::comprehensive_fixture())
         .open_all_files()
         .build()
         .await;
@@ -753,7 +565,7 @@ async fn test_document_symbols_add_function() {
 #[tokio::test]
 async fn test_workspace_symbols_qualified_names() {
     let ws = TestWorkspace::builder()
-        .fixture(&comprehensive_fixture())
+        .fixture(&common::comprehensive_fixture())
         .open_all_files()
         .build()
         .await;
@@ -806,7 +618,7 @@ async fn test_workspace_symbols_qualified_names() {
 #[tokio::test]
 async fn test_document_symbols_lib_rs_reexports() {
     let ws = TestWorkspace::builder()
-        .fixture(&comprehensive_fixture())
+        .fixture(&common::comprehensive_fixture())
         .open_all_files()
         .build()
         .await;

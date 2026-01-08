@@ -1,5 +1,6 @@
 use kadabra_runes::lsp::client::LspClient;
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::time::Duration;
 use tempfile::TempDir;
 
@@ -65,7 +66,7 @@ pub struct TestWorkspace {
     /// fixture for the workspace
     pub fixture: Fixture,
     /// LSP client (if created)
-    pub lsp: Option<LspClient>,
+    pub lsp: Option<Arc<LspClient>>,
     /// Canonicalized root path (resolves symlinks like /var -> /private/var on macOS)
     canonical_root: PathBuf,
 }
@@ -114,9 +115,9 @@ impl TestWorkspace {
     /// Returns a reference to the LSP client
     /// ## Panics
     /// Panics if LSP client was not created
-    pub fn lsp(&self) -> &LspClient {
+    pub fn lsp(&self) -> Arc<LspClient> {
         self.lsp
-            .as_ref()
+            .clone()
             .expect("LSP client not initialized. Use builder().with_lsp() to create LSP client")
     }
 }
@@ -168,7 +169,7 @@ impl TestWorkspaceBuilder {
             open_workspace_files(&lsp, &workspace).await;
         }
 
-        workspace.lsp = Some(lsp);
+        workspace.lsp = Some(Arc::new(lsp));
 
         workspace
     }

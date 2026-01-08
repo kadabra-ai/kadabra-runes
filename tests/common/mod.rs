@@ -9,9 +9,6 @@ use kadabra_runes::lsp::client::LspClient;
 use std::path::PathBuf;
 use std::time::Duration;
 
-// Re-export for convenience
-pub use temp_workspace::TestWorkspace;
-
 /// Helper to get the fixture project path
 pub fn fixture_path() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/sample_project")
@@ -93,4 +90,55 @@ pub async fn open_file(client: &LspClient, relative_path: &str) -> PathBuf {
     tokio::time::sleep(process_wait).await;
 
     path
+}
+
+// Helper to create fixture with cursor markers
+fn create_fixture_with_cursor(
+    cargo_toml: &str,
+    main_rs: &str,
+    lib_rs: &str,
+    calculator_rs: &str,
+    cursor_file: &str,
+    cursor_pattern: &str,
+) -> String {
+    let main_with_cursor = if cursor_file == "main.rs" {
+        main_rs.replacen(cursor_pattern, &format!("{}$0", cursor_pattern), 1)
+    } else {
+        main_rs.to_string()
+    };
+
+    let lib_with_cursor = if cursor_file == "lib.rs" {
+        lib_rs.replacen(cursor_pattern, &format!("{}$0", cursor_pattern), 1)
+    } else {
+        lib_rs.to_string()
+    };
+
+    let calc_with_cursor = if cursor_file == "calculator.rs" {
+        calculator_rs.replacen(cursor_pattern, &format!("{}$0", cursor_pattern), 1)
+    } else {
+        calculator_rs.to_string()
+    };
+
+    format!(
+        r#"//- /Cargo.toml
+{}
+//- /src/main.rs
+{}
+//- /src/lib.rs
+{}
+//- /src/calculator.rs
+{}
+"#,
+        cargo_toml, main_with_cursor, lib_with_cursor, calc_with_cursor
+    )
+}
+
+pub fn comprehensive_fixture() -> String {
+    let cargo_toml = include_str!("../fixtures/sample_project/Cargo.toml");
+    let main_rs = include_str!("../fixtures/sample_project/src/main.rs");
+    let lib_rs = include_str!("../fixtures/sample_project/src/lib.rs");
+    let calculator_rs = include_str!("../fixtures/sample_project/src/calculator.rs");
+
+    // Add cursor at the 'add' function call in main.rs
+    create_fixture_with_cursor(cargo_toml, main_rs, lib_rs, calculator_rs, "main.rs", "add")
 }

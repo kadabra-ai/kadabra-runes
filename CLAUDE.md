@@ -25,26 +25,29 @@ cargo install --path .
 
 ### Testing
 
-Integration tests use `serial_test` crate to automatically run one at a time (no manual flags needed):
+Tests are organized into multiple test files with shared utilities. The `serial_test` crate automatically serializes tests that need it:
 
 ```bash
-# Run all tests
-cargo test --test integration_test
+# Run all tests (unit + integration)
+cargo test
+
+# Run LSP client tests
+cargo test --test lsp_client_test
+
+# Run MCP tool tests
+cargo test --test mcp_tool_test
 
 # Run specific test
-cargo test --test integration_test test_goto_definition
+cargo test --test lsp_client_test test_goto_definition
 
 # With debug logging
-RUST_LOG=debug cargo test --test integration_test -- --nocapture
-
-# Run all tests (including unit tests)
-cargo test
+RUST_LOG=debug cargo test --test lsp_client_test -- --nocapture
 ```
 
 ### Running the Server
 
 ```bash
-# Run for current directory
+# Run for current directory (default serve command)
 cargo run
 
 # Run for specific workspace
@@ -55,6 +58,11 @@ cargo run -- --workspace . --log-level debug
 
 # Using installed binary
 kadabra-runes --workspace /path/to/project
+
+# Create .mcp.json configuration in current directory
+cargo run -- config
+# Or with installed binary:
+kadabra-runes config
 ```
 
 ## Architecture
@@ -72,9 +80,11 @@ LLM Client (Claude Code) ←→ MCP Server (kadabra-runes) ←→ LSP Client ←
 
 **`src/main.rs`**: CLI entry point - parses args, initializes logging to stderr (stdout is reserved for MCP), sets up LSP client, starts MCP server with stdio transport.
 
-**`src/lib.rs`**: Library root that re-exports the three main modules.
+**`src/lib.rs`**: Library root that re-exports the main modules.
 
 **`src/error.rs`**: Centralized error types (`LspError`, `McpError`) using `thiserror`.
+
+**`src/config.rs`**: Configuration helper to create/update `.mcp.json` files for MCP client setup.
 
 **`src/lsp/` (LSP Client Layer)**:
 - `client.rs`: Manages language server lifecycle - spawns process, handles initialization handshake, sends requests, correlates responses
@@ -105,15 +115,30 @@ LLM Client (Claude Code) ←→ MCP Server (kadabra-runes) ←→ LSP Client ←
 
 ### Testing Architecture
 
-`tests/integration_test.rs`: End-to-end tests that:
-- Spawn real rust-analyzer instances
-- Use `tests/fixtures/sample_project` as test workspace
-- Automatically serialized via `serial_test` crate (using `#[serial]` attribute) to prevent conflicts
-- CI-aware timeouts to handle slower CI environments:
-  - Local: 60s init, 30s request, 2s indexing wait, 500ms file processing
-  - CI: 120s init, 60s request, 8s indexing wait, 3s file processing
-- Test all 9 navigation tools with realistic scenarios
-- Detect CI via `std::env::var("CI").is_ok()` for automatic timeout adjustment
+Tests are split across multiple files with shared utilities:
+
+**`tests/common/`** - Shared test infrastructure:
+- `mod.rs`: Common helpers for fixtures, rust-analyzer detection, LSP client setup
+- `lsp_harness.rs`: LSP client spawning with CI-aware timeouts
+- `temp_workspace.rs`: `TestWorkspace` builder pattern for creating test fixtures with:
+  - Automatic temporary directory management
+  - Fixture parsing with cursor markers (`$0`)
+  - LSP client lifecycle management
+  - Automatic file opening via `did_open`
+
+**`tests/lsp_client_test.rs`**: Direct LSP client tests:
+- Tests all 9 navigation tools (goto_definition, find_references, hover, etc.)
+- Uses `TestWorkspace::builder()` pattern
+- No explicit serialization needed - tests are independent
+
+**`tests/mcp_tool_test.rs`**: MCP server tool interface tests:
+- Tests MCP layer by invoking tools through `KadabraRunes` server
+- Validates JSON-RPC responses and formatting
+- Ensures LLM-friendly output format
+
+**Test Timeouts** (CI-aware via `std::env::var("CI")`):
+- Local: 60s init, 30s request, 2s indexing, 500ms file processing
+- CI: 120s init, 60s request, 8s indexing, 3s file processing
 
 ## Response Format Conventions
 
@@ -143,6 +168,36 @@ All tool responses follow consistent LLM-friendly patterns:
 
 ## Common Patterns
 
+### Writing Tests
+
+Use the `TestWorkspace` builder pattern for integration tests:
+
+```rust
+#[tokio::test]
+async fn test_goto_definition() {
+    let ws = TestWorkspace::builder()
+        .fixture(&common::comprehensive_fixture())
+        .open_all_files()  // Automatically calls did_open on all files
+        .build()
+        .await;
+
+    let result = ws.lsp()
+        .goto_definition(&ws.apath("src/main.rs"), 7, 18)
+        .await
+        .expect("should succeed");
+
+    // Assert on result...
+
+    ws.lsp().shutdown().await.expect("shutdown should succeed");
+}
+```
+
+**Fixture Format**:
+- Fixtures use `//- /path` markers to define files
+- `$0` marks cursor position for tests
+- Paths are relative to workspace root
+- Example: `//- /src/main.rs` followed by file content
+
 ### Error Handling
 - Use `anyhow::Result` for main/CLI code with context
 - Use domain-specific error types (`LspError`, `McpError`) for library code
@@ -163,11 +218,13 @@ All tool responses follow consistent LLM-friendly patterns:
 
 ## Important Constraints
 
-1. **Integration Tests Serialization**: Tests use `#[serial]` attribute from `serial_test` crate to run sequentially
-2. **Workspace Paths**: Must be absolute paths, canonicalized before use
-3. **Stdout Reserved**: Never write to stdout except for MCP protocol messages
-4. **LSP Version Compatibility**: `lsp-types` version must match `async-lsp` dependency
-5. **Line/Column Indexing**: Tools accept 1-indexed (human) but convert to 0-indexed for LSP
+1. **Test Organization**: Tests are split into `lsp_client_test.rs` and `mcp_tool_test.rs` with shared `common/` module
+2. **Test Fixtures**: Use `TestWorkspace::builder()` pattern with fixture strings containing `$0` cursor markers
+3. **Workspace Paths**: Must be absolute paths, canonicalized before use (macOS symlink resolution: `/var` → `/private/var`)
+4. **Stdout Reserved**: Never write to stdout except for MCP protocol messages (all logs go to stderr)
+5. **LSP Version Compatibility**: `lsp-types` version must match `async-lsp` dependency
+6. **Line/Column Indexing**: Tools accept 1-indexed (human) but convert to 0-indexed for LSP
+7. **Config Command**: `kadabra-runes config` creates `.mcp.json` with proper MCP server configuration
 
 ## CI/CD Pipeline
 
@@ -217,12 +274,22 @@ See PUBLISHING.md for detailed instructions.
 For full release automation, configure these GitHub secrets:
 - `CARGO_TOKEN` - For publishing to crates.io (optional)
 
+## Known Limitations
+
+1. **workspace_symbols Behavior**: rust-analyzer's workspace_symbols has quirks:
+   - Works reliably for structs, enums, and traits (100% match rate)
+   - Function names may not always resolve in workspace_symbols queries
+   - Use `document_symbols` for reliable function discovery in specific files
+   - `goto_definition` works with symbols currently in opened documents
+
+2. **Symbol Resolution**: goto_definition is limited to symbols in currently opened documents. For best results, ensure files are opened via `did_open` before querying.
+
 ## Future Enhancements (Documented in README)
 
 - Support for TypeScript/JavaScript (typescript-language-server)
 - Support for Python (pylsp/pyright)
 - Support for Go (gopls)
-- Symbol name-based queries (currently position-based only)
+- Improved symbol name-based queries across unopened files
 - Diagnostics tool (compiler errors/warnings)
 - Code actions (quick fixes, refactorings)
 - Response caching for performance

@@ -15,27 +15,24 @@
 //! cargo test --test mcp_tool_test test_mcp_goto_definition_by_name
 //! ```
 mod common;
-use common::{fixture_path, open_file, setup_client};
+
+use common::temp_workspace::TestWorkspace;
 use kadabra_runes::mcp::KadabraRunes;
 use kadabra_runes::mcp::tools::PositionParams;
 use rmcp::handler::server::wrapper::Parameters;
 use rmcp::model::RawContent;
-use serial_test::serial;
 
 #[tokio::test]
-#[serial]
 async fn test_mcp_goto_definition_tool() {
-    // Setup LSP client and open test file
-    let lsp_client = setup_client().await;
-    let main_path = open_file(&lsp_client, "src/main.rs").await;
-
-    // Create MCP server with the initialized LSP client
-    let workspace = fixture_path();
-    let server = KadabraRunes::new(workspace, lsp_client);
-
+    let ws = TestWorkspace::builder()
+        .fixture(&common::comprehensive_fixture())
+        .open_all_files()
+        .build()
+        .await;
+    let server = KadabraRunes::new(ws.root.path().into(), ws.lsp());
     // Invoke goto_definition tool with parameters
     let params = PositionParams {
-        file_path: main_path.display().to_string(),
+        file_path: ws.root.path().join("src/main.rs").display().to_string(),
         line: 7,
         column: 18,
     };

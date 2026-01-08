@@ -415,6 +415,11 @@ impl LspClient {
     pub async fn did_open(&self, path: &Path) -> LspResult<()> {
         let uri = path_to_url(path)?;
 
+        // Check if already open - return early to avoid duplicate notification
+        if self.open_documents.lock().await.contains(&uri) {
+            return Ok(());
+        }
+
         // Read file content
         let content = tokio::fs::read_to_string(path).await.map_err(|e| {
             LspError::DocumentNotFound(format!("failed to read '{}': {}", path.display(), e))
